@@ -666,3 +666,7 @@ class NumericBinner(BaseEstimator, TransformerMixin):
             self.binner[column_name] = binner_temp
 
         return self
+
+    def fit_transform(X, y):
+        self.fit(X, y)
+        return self.transform(X)
