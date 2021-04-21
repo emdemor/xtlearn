@@ -667,6 +667,6 @@ class NumericBinner(BaseEstimator, TransformerMixin):
 
         return self
 
-    def fit_transform(X, y):
+    def fit_transform(self, X, y):
         self.fit(X, y)
         return self.transform(X)
