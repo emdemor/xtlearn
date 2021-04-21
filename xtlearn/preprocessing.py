@@ -26,10 +26,16 @@ import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from IPython.display import clear_output
-from sklearn.preprocessing import MinMaxScaler, RobustScaler
-from sklearn.preprocessing import KBinsDiscretizer
-from sklearn.preprocessing import KernelCenterer
+from sklearn.preprocessing import (
+    MinMaxScaler,
+    RobustScaler,
+    KBinsDiscretizer,
+    KernelCenterer,
+    QuantileTransformer,
+)
 from sklearn.pipeline import Pipeline
+
+from .metrics import eval_information_value
 
 
 class ReplaceValue(BaseEstimator, TransformerMixin):
@@ -511,48 +517,61 @@ class EncoderDataframe(TransformerMixin):
 from sklearn.preprocessing import OrdinalEncoder
 
 
-class OrdinalEncoderDataframe(TransformerMixin):
-    """
-    >>> enc = OrdinalEncoderDataframe(feature_categories = {
-                'ExterQual':['Po','Fa','TA','Gd','Ex'],
-                'ExterCond':['Po','Fa','TA','Gd','Ex']})
-    >>> X = enc.fit_transform(X)
-    """
+# class OrdinalEncoderDataframe(TransformerMixin):
+#     """
+#     >>> enc = OrdinalEncoderDataframe(feature_categories = {
+#                 'ExterQual':['Po','Fa','TA','Gd','Ex'],
+#                 'ExterCond':['Po','Fa','TA','Gd','Ex']})
+#     >>> X = enc.fit_transform(X)
+#     """
 
-    def __init__(self, feature_categories):
-        self.feature_categories = feature_categories
+#     def __init__(self, feature_categories):
+#         self.feature_categories = feature_categories
 
-    def fit(self, X, y=None):
-        self.enc = {}
-        for feature_name in self.feature_categories.keys():
-            self.enc[feature_name] = OrdinalEncoder(
-                [self.feature_categories[feature_name]]
-            )
-            self.enc[feature_name].fit(
-                np.array(X_trn[feature_name].values).reshape(-1, 1)
-            )
-        return self
+#     def fit(self, X, y=None):
+#         self.enc = {}
+#         for feature_name in self.feature_categories.keys():
+#             self.enc[feature_name] = OrdinalEncoder(
+#                 [self.feature_categories[feature_name]]
+#             )
+#             self.enc[feature_name].fit(
+#                 np.array(X_trn[feature_name].values).reshape(-1, 1)
+#             )
+#         return self
 
-    def transform(self, X, y=None):
-        X_ = X.copy()
+#     def transform(self, X, y=None):
+#         X_ = X.copy()
 
-        for feature_name in self.feature_categories.keys():
-            X_[feature_name] = self.enc[feature_name].transform(
-                np.array(X_[feature_name].values).reshape(-1, 1)
-            )
+#         for feature_name in self.feature_categories.keys():
+#             X_[feature_name] = self.enc[feature_name].transform(
+#                 np.array(X_[feature_name].values).reshape(-1, 1)
+#             )
 
-        return X_
+#         return X_
 
 
 class NumericBinner(BaseEstimator, TransformerMixin):
     """  """
 
-    def __init__(self, columns=None, max_bins=8):
+    def __init__(self, columns=None, min_bins=None, max_bins=None, n_bins=None):
+
         """ """
         self.columns = columns
         self.binner = None
         self.bins = None
+        self.min_bins = min_bins
         self.max_bins = max_bins
+        self.n_bins = n_bins
+
+        if (self.min_bins is None) and (self.max_bins is None) and (n_bins is None):
+            self.min_bins = 2
+            self.max_bins = 8
+
+        elif (
+            (self.min_bins is None) and (self.max_bins is None) and (n_bins is not None)
+        ):
+            self.min_bins = self.n_bins
+            self.max_bins = self.n_bins
 
     def transform(self, X, **transform_params):
         """    """
@@ -643,11 +662,7 @@ class NumericBinner(BaseEstimator, TransformerMixin):
                     binner_temp = binner
 
                 clear_output()
-
-                # self.bins[column_name] = eval_information_value(X_local[column_name],y,y_values = [0,1],goods = 0)
-
             self.bins[column_name] = bin_temp
             self.binner[column_name] = binner_temp
-            # X_temp[column_name] = X_temp[column_name].apply(lambda x: self.bins[column_name]['woe'][x])
 
         return self

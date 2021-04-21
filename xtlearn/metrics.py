@@ -1,3 +1,11 @@
+import pandas as pd
+import numpy as np
+
+from sklearn.metrics import roc_auc_score, make_scorer
+
+from scipy import stats
+
+
 def eval_information_value(column, target, y_values=[0, 1], goods=0, treat_inf=False):
     def check_value(x, ref):
         return np.sum(np.where(x == ref, 1, 0))
