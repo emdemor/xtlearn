@@ -23,11 +23,13 @@ import numpy, math, scipy, pandas
 import numpy as np
 import pandas as pd
 
+
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from IPython.display import clear_output
+from sklearn import preprocessing
 from sklearn.preprocessing import (
-    MinMaxScaler,
+    # MinMaxScaler,
     RobustScaler,
     KBinsDiscretizer,
     KernelCenterer,
@@ -294,6 +296,67 @@ class Encoder(BaseEstimator, TransformerMixin):
         return pd.get_dummies(X_in, drop_first=self.drop_first)
 
 
+class OneHotMissingEncoder(BaseEstimator, TransformerMixin):
+    """  """
+
+    def __init__(self, columns, suffix="nan", sep="_", dummy_na=True, drop_last=False):
+        """ """
+        self.columns = columns
+        self.suffix = suffix
+        self.sep = sep
+
+        self.any_missing = None
+        self.column_values = None
+        self.last_value = None
+
+        self.dummy_na = dummy_na
+        self.drop_last = drop_last
+
+    def transform(self, X, **transform_params):
+        """    """
+        X_copy = X.copy()
+
+        final_columns = []
+
+        for col in X_copy.columns:
+            if col not in self.columns:
+                final_columns.append(col)
+            else:
+                for value in self.column_values[col]:
+                    col_name = col + self.sep + str(value)
+                    if (
+                        self.drop_last
+                        and value == self.last_value[col]
+                        and (not self.any_missing[col])
+                    ):
+                        pass  # dropping
+
+                    else:
+                        final_columns.append(col_name)
+                        X_copy[col_name] = (X_copy[col] == value).astype(int)
+
+                if self.any_missing[col]:
+                    if self.dummy_na and not self.drop_last:
+                        col_name = col + self.sep + "nan"
+                        final_columns.append(col_name)
+                        X_copy[col_name] = pd.isnull(X_copy[col]).astype(int)
+
+        return X_copy[final_columns]
+
+    def fit(self, X, y=None, **fit_params):
+        """ """
+        self.any_missing = {col: (pd.notnull(X[col]).sum() > 0) for col in self.columns}
+
+        self.column_values = {
+            col: sorted([x for x in list(X[col].unique()) if pd.notnull(x)])
+            for col in self.columns
+        }
+
+        self.last_value = {col: self.column_values[col][-1] for col in self.columns}
+
+        return self
+
+
 class MeanModeImputer(BaseEstimator, TransformerMixin):
     """
 
@@ -379,7 +442,7 @@ class ScalerDF(BaseEstimator, TransformerMixin):
 
     def __transformation(self, X_in):
         X = X_in.copy()
-        scaler = MinMaxScaler(copy=True, feature_range=(0, 1))
+        scaler = preprocessing.MinMaxScaler(copy=True, feature_range=(0, 1))
 
         try:
             ind = np.array(list(X.index)).reshape(-1, 1)
@@ -399,6 +462,20 @@ class ScalerDF(BaseEstimator, TransformerMixin):
             X = pd.DataFrame(scaler.fit_transform(X), columns=list(X.columns))
 
         return X
+
+
+class MinMaxScaler(preprocessing.MinMaxScaler):
+    def __init__(self, **kwargs):
+
+        super().__init__(**kwargs)
+
+    def fit(self, X, y=None):
+
+        super().fit(X)
+
+    def transform(self, X):
+
+        return pd.DataFrame(super().transform(X), columns=X.columns, index=X.index)
 
 
 class DataFrameImputer(TransformerMixin):
@@ -515,39 +592,6 @@ class EncoderDataframe(TransformerMixin):
 
 
 from sklearn.preprocessing import OrdinalEncoder
-
-
-# class OrdinalEncoderDataframe(TransformerMixin):
-#     """
-#     >>> enc = OrdinalEncoderDataframe(feature_categories = {
-#                 'ExterQual':['Po','Fa','TA','Gd','Ex'],
-#                 'ExterCond':['Po','Fa','TA','Gd','Ex']})
-#     >>> X = enc.fit_transform(X)
-#     """
-
-#     def __init__(self, feature_categories):
-#         self.feature_categories = feature_categories
-
-#     def fit(self, X, y=None):
-#         self.enc = {}
-#         for feature_name in self.feature_categories.keys():
-#             self.enc[feature_name] = OrdinalEncoder(
-#                 [self.feature_categories[feature_name]]
-#             )
-#             self.enc[feature_name].fit(
-#                 np.array(X_trn[feature_name].values).reshape(-1, 1)
-#             )
-#         return self
-
-#     def transform(self, X, y=None):
-#         X_ = X.copy()
-
-#         for feature_name in self.feature_categories.keys():
-#             X_[feature_name] = self.enc[feature_name].transform(
-#                 np.array(X_[feature_name].values).reshape(-1, 1)
-#             )
-
-#         return X_
 
 
 class NumericBinner(BaseEstimator, TransformerMixin):

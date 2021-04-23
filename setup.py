@@ -5,14 +5,14 @@ with open("README.md", "r") as fh:
 
 setup(
     name="xtlearn",
-    version="0.0.8",
+    version="0.0.9",
     url="https://github.com/emdemor/xtlearn",
     license="MIT License",
     author="Eduardo M. de Morais",
     long_description=readme,
     long_description_content_type="text/markdown",
     author_email="emdemor415@gmail.com",
-    keywords="covid-19",
+    keywords="preprocessing",
     description=u"This is a package with classes to be used in sklearn pipelines with pandas dataframes",
     packages=["xtlearn"],
     install_requires=["numpy", "scipy", "pandas", "setuptools", "tqdm", "scikit-learn"],
