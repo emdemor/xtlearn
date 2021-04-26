@@ -464,18 +464,21 @@ class ScalerDF(BaseEstimator, TransformerMixin):
         return X
 
 
+def _dataframe_transform(transformer, data):
+    if isinstance(data, (pd.DataFrame)):
+        return pd.DataFrame(
+            transformer.transform(data), columns=data.columns, index=data.index
+        )
+    else:
+        return transformer.transform(data)
+
+
 class MinMaxScaler(preprocessing.MinMaxScaler):
     def __init__(self, **kwargs):
-
         super().__init__(**kwargs)
 
-    def fit(self, X, y=None):
-
-        super().fit(X)
-
     def transform(self, X):
-
-        return pd.DataFrame(super().transform(X), columns=X.columns, index=X.index)
+        return _dataframe_transform(super(), X)
 
 
 class DataFrameImputer(TransformerMixin):
