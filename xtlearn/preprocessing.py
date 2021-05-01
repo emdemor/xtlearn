@@ -620,6 +620,12 @@ class NumericBinner(BaseEstimator, TransformerMixin):
             self.min_bins = self.n_bins
             self.max_bins = self.n_bins
 
+        elif (self.min_bins is None) and (self.max_bins is not None):
+            self.min_bins = 2
+
+        elif (self.min_bins is not None) and (self.max_bins is None):
+            self.max_bins = 8
+
     def transform(self, X, **transform_params):
         """    """
         X_copy = X.copy()
@@ -660,55 +666,84 @@ class NumericBinner(BaseEstimator, TransformerMixin):
                 X_local = X_copy.copy()
 
                 X_temp = X_local.loc[X_local[column_name].notna()][[column_name]].copy()
-
                 n = len(X_temp)
 
-                n_quant = 1000 if n >= 1000 else n
+                n_unique = len(X_temp[column_name].unique())
 
-                binner = Pipeline(
-                    steps=(
-                        ("scaler", RobustScaler()),
-                        (
-                            "quantile",
-                            QuantileTransformer(
-                                output_distribution="uniform", n_quantiles=n_quant
+                if n_unique >= i:
+
+                    n_quant = 1000 if n >= 1000 else n
+
+                    binner = Pipeline(
+                        steps=(
+                            ("scaler", RobustScaler()),
+                            (
+                                "quantile",
+                                QuantileTransformer(
+                                    output_distribution="uniform", n_quantiles=n_quant
+                                ),
                             ),
-                        ),
-                        (
-                            "binning",
-                            KBinsDiscretizer(
-                                n_bins=i, strategy="kmeans", encode="ordinal"
+                            (
+                                "binning",
+                                KBinsDiscretizer(
+                                    n_bins=i, strategy="kmeans", encode="ordinal"
+                                ),
                             ),
-                        ),
+                        )
                     )
-                )
 
-                X_temp = binner.fit_transform(X_temp)
+                    X_temp[column_name + "_transf"] = (
+                        binner.fit_transform(X_temp).flatten() + 1
+                    )
+                    X_temp[column_name + "_transf"] = X_temp[
+                        column_name + "_transf"
+                    ].astype(int, errors="ignore")
+                    X_temp.loc[X_copy[column_name].isna(), column_name + "_transf"] = 0
 
-                X_local.loc[X_local[column_name].notna(), column_name] = (
-                    X_temp.flatten() + 1
-                )
+                    summary = X_temp.groupby(column_name + "_transf").agg(
+                        min=(column_name, "min"),
+                        max=(column_name, "max"),
+                        mean=(column_name, "mean"),
+                        std=(column_name, "std"),
+                    )
 
-                X_local.loc[X_copy[column_name].isna(), column_name] = 0
+                    X_local.loc[X_local[column_name].notna(), column_name] = X_temp[
+                        column_name + "_transf"
+                    ]
 
-                X_local[column_name] = X_local[column_name].astype(int, errors="ignore")
+                    X_local.loc[X_copy[column_name].isna(), column_name] = 0
+                    X_local[column_name] = X_local[column_name].astype(
+                        int, errors="ignore"
+                    )
 
-                iv = eval_information_value(
-                    X_local[column_name], y, y_values=[0, 1], goods=0, treat_inf=True
-                )
+                    iv = eval_information_value(
+                        X_local[column_name],
+                        y,
+                        y_values=[0, 1],
+                        goods=0,
+                        treat_inf=True,
+                    )
 
-                X_local[column_name] = X_local[column_name].apply(
-                    lambda x: iv["woe"][x]
-                )
+                    iv = iv.merge(
+                        summary.reset_index(),
+                        how="left",
+                        right_on=column_name + "_transf",
+                        left_index=True,
+                    ).set_index(column_name + "_transf")
 
-                if (iv["iv"].sum() > iv_temp) & (
-                    np.isfinite(X_local[column_name].unique()).all()
-                ):
-                    iv_temp = iv["iv"].sum()
-                    bin_temp = iv
-                    binner_temp = binner
+                    X_local[column_name] = X_local[column_name].apply(
+                        lambda x: iv["woe"][x]
+                    )
 
-                clear_output()
+                    if (iv["iv"].sum() > iv_temp) & (
+                        np.isfinite(X_local[column_name].unique()).all()
+                    ):
+                        iv_temp = iv["iv"].sum()
+                        bin_temp = iv
+                        bin_temp.index.name = "bin"
+                        bin_temp = bin_temp.assign(total_iv=iv_temp)
+                        binner_temp = binner
+
             self.bins[column_name] = bin_temp
             self.binner[column_name] = binner_temp
 
