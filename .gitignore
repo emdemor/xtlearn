@@ -5,7 +5,7 @@
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
 
-test.ipynb
+.test.ipynb
 
 .vscode/
 **/.vscode/
