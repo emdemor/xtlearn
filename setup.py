@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="xtlearn",
-    version="0.0.13",
+    version="0.0.14",
     url="https://github.com/emdemor/xtlearn",
     license="MIT License",
     author="Eduardo M. de Morais",
