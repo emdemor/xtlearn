@@ -37,6 +37,8 @@ from sklearn.preprocessing import (
 )
 from sklearn.pipeline import Pipeline
 
+from scipy import stats
+
 from .metrics import eval_information_value
 
 
@@ -751,4 +753,58 @@ class NumericBinner(BaseEstimator, TransformerMixin):
 
     def fit_transform(self, X, y):
         self.fit(X, y)
+        return self.transform(X)
+
+
+class KS2Selector(TransformerMixin):
+    """ """
+
+    def __init__(self, alpha=0.05, invalid_label="OTHER", features=None, min_count=10):
+        self.invalid_label = invalid_label
+        self.alpha = alpha
+        self.features = features
+        self.relevant_classes = None
+        self.min_count = min_count
+
+    def fit(self, X, y):
+
+        classes_dict = {}
+        for col in self.features:
+
+            count_dict = X[col].value_counts().to_frame()
+
+            class_1st = count_dict[count_dict[col] >= self.min_count].index
+
+            list_ = []
+            for class_ in class_1st:
+                try:
+                    ks_res = stats.ks_2samp(y[X[col] == class_], y[X[col] != class_])
+                    list_.append((class_, *tuple(ks_res)))
+
+                except:
+                    pass
+
+            df_temp = pd.DataFrame(list_, columns=[col, "KS", "pval"])
+
+            relevant_classes = df_temp[df_temp["pval"] <= self.alpha][col]
+
+            classes_dict[col] = list(relevant_classes)
+
+        self.relevant_classes = classes_dict
+
+        return self
+
+    def transform(self, X, y=None):
+
+        for col in self.relevant_classes:
+            relevant_classes = self.relevant_classes[col]
+
+            X[col] = np.where(
+                np.isin(X[col], relevant_classes), X[col], self.invalid_label
+            )
+
+        return X
+
+    def fit_transform(self, X, y):
+        transformer = self.fit(X, y)
         return self.transform(X)
