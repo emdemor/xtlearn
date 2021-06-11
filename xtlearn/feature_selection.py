@@ -92,11 +92,14 @@ class FeatureRemover(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self, features, active=True):
+    def __init__(self, features, errors="raise", active=True):
         self.features = features
         self.active = active
+        self.errors = errors
 
     def fit(self, X, y=None):
+        if type(self.features) == str:
+            self.features = [self.features]
         return self
 
     def transform(self, X):
@@ -104,7 +107,9 @@ class FeatureRemover(BaseEstimator, TransformerMixin):
             return X
         else:
             self.X = X.copy()
-            return self.X.drop(columns=self.features)
+            for col in self.features:
+                self.X = self.X.drop(columns=col, errors=self.errors)
+            return self.X
 
 
 class DropMissingDataColumns(BaseEstimator, TransformerMixin):
