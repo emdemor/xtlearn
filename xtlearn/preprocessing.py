@@ -22,11 +22,12 @@ Informations
 import numpy, math, scipy, pandas
 import numpy as np
 import pandas as pd
+from scipy.stats import zscore
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from IPython.display import clear_output
+# from IPython.display import clear_output
 from sklearn import preprocessing
 from sklearn.preprocessing import (
     # MinMaxScaler,
@@ -299,7 +300,7 @@ class Encoder(BaseEstimator, TransformerMixin):
 
 
 class OneHotMissingEncoder(BaseEstimator, TransformerMixin):
-    """  """
+    """ """
 
     def __init__(self, columns, suffix="nan", sep="_", dummy_na=True, drop_last=False):
         """ """
@@ -315,7 +316,7 @@ class OneHotMissingEncoder(BaseEstimator, TransformerMixin):
         self.drop_last = drop_last
 
     def transform(self, X, **transform_params):
-        """    """
+        """ """
         X_copy = X.copy()
 
         final_columns = []
@@ -600,7 +601,7 @@ from sklearn.preprocessing import OrdinalEncoder
 
 
 class NumericBinner(BaseEstimator, TransformerMixin):
-    """  """
+    """ """
 
     def __init__(self, columns=None, min_bins=None, max_bins=None, n_bins=None):
 
@@ -629,7 +630,7 @@ class NumericBinner(BaseEstimator, TransformerMixin):
             self.max_bins = 8
 
     def transform(self, X, **transform_params):
-        """    """
+        """ """
         X_copy = X.copy()
         for column_name in self.columns:
 
@@ -808,3 +809,159 @@ class KS2Selector(TransformerMixin):
     def fit_transform(self, X, y):
         transformer = self.fit(X, y)
         return self.transform(X)
+
+
+class Apply(BaseEstimator, TransformerMixin):
+    def __init__(self, function, features="all", axis=0, active=True):
+        self.features = features
+        self.function = function
+        self.axis = axis
+        self.active = active
+
+    def fit(self, X, y=None):
+        if type(self.features) == str:
+            if self.features == "all":
+                if self.axis == 0:
+                    self.features = list(X.columns)
+            else:
+                self.features = [self.features]
+
+        return self
+
+    def transform(self, X):
+        if not self.active:
+            return X
+        else:
+            return self.__transformation(X)
+
+    def fit_transform(self, X, y=None, **fit_params):
+        return super().fit_transform(X, y=y, **fit_params)
+
+    def __transformation(self, X_in):
+        X = X_in.copy()
+
+        if type(self.features) == str:
+            if self.features == "all":
+                if self.axis == 1:
+                    X = X.apply(self.function, axis=1)
+
+        if (type(self.features) == list) or (type(self.features) == tuple):
+            for col in self.features:
+                X[col] = X[col].apply(self.function)
+
+        return X
+
+
+class FillNaWithColumn(BaseEstimator, TransformerMixin):
+    def __init__(self, feature, column_source, active=True):
+        self.feature = feature
+        self.column_source = column_source
+        self.active = active
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X[self.feature] = X[self.feature].fillna(X[self.column_source])
+        return X
+
+    def fit_transform(self, X, y=None, **fit_params):
+        return super().fit_transform(X, y=y, **fit_params)
+
+
+class FillNaWithValue(BaseEstimator, TransformerMixin):
+    def __init__(self, feature, value, active=True):
+        self.feature = feature
+        self.value = value
+        self.active = active
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X[self.feature] = X[self.feature].fillna(self.value)
+        return X
+
+    def fit_transform(self, X, y=None, **fit_params):
+        return super().fit_transform(X, y=y, **fit_params)
+
+
+class StringReplace(BaseEstimator, TransformerMixin):
+    def __init__(self, features, pat, repl, n=-1, case=None, flags=0, regex=None):
+        self.features = features
+        self.pat = pat
+        self.repl = repl
+        self.n = n
+        self.case = case
+        self.flags = flags
+        self.regex = regex
+
+    def fit(self, X, y=None):
+        if type(self.features) == str:
+            self.features = [self.features]
+
+        return self
+
+    def transform(self, X):
+        for col in self.features:
+            X[col] = X[col].str.replace(
+                pat=self.pat,
+                repl=self.repl,
+                n=self.n,
+                case=self.case,
+                flags=self.flags,
+                regex=self.regex,
+            )
+        return X
+
+    def fit_transform(self, X, y=None, **fit_params):
+        return super().fit_transform(X, y=y, **fit_params)
+
+
+class Converter(BaseEstimator, TransformerMixin):
+    def __init__(self, features, type):
+        self.features = features
+        self.type = type
+
+    def fit(self, X, y=None):
+        if type(self.features) == str:
+            self.features = [self.features]
+        return self
+
+    def transform(self, X):
+        for col in self.features:
+            X[col] = X[col].astype(self.type, errors="ignore")
+        return X
+
+    def fit_transform(self, X, y=None, **fit_params):
+        return super().fit_transform(X, y=y, **fit_params)
+
+
+class OutliersRemover(BaseEstimator, TransformerMixin):
+    def __init__(self, features, z=3):
+        self.features = features
+        self.z = z
+
+    def fit(self, X, y=None):
+        if type(self.features) == str:
+            self.features = [self.features]
+        return self
+
+    def transform(self, X):
+        for col in self.features:
+            X[col] = self.removing_outliers(X, col, z=self.z)
+        return X
+
+    def fit_transform(self, X, y=None, **fit_params):
+        return super().fit_transform(X, y=y, **fit_params)
+
+    def removing_outliers(self, data, column, z=3):
+        X = data.copy()
+        X.loc[zscore(X[column]) >= z, column] = X.loc[
+            zscore(X[column]) < z, column
+        ].max()
+        X.loc[zscore(X[column]) <= -z, column] = X.loc[
+            zscore(X[column]) > -z, column
+        ].min()
+
+        return X[column]
