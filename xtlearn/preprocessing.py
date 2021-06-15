@@ -957,11 +957,12 @@ class OutliersRemover(BaseEstimator, TransformerMixin):
 
     def removing_outliers(self, data, column, z=3):
         X = data.copy()
-        X.loc[zscore(X[column]) >= z, column] = X.loc[
-            zscore(X[column]) < z, column
-        ].max()
-        X.loc[zscore(X[column]) <= -z, column] = X.loc[
-            zscore(X[column]) > -z, column
-        ].min()
+
+        X["z_score"] = zscore(X[column], nan_policy="omit")
+
+        list_ref = X[(X["z_score"] <= z) & (X["z_score"] >= -z)][column]
+
+        X.loc[X["z_score"] > z, column] = list_ref.max()
+        X.loc[X["z_score"] < -z, column] = list_ref.min()
 
         return X[column]
