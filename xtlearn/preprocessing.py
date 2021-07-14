@@ -484,6 +484,22 @@ class MinMaxScaler(preprocessing.MinMaxScaler):
         return _dataframe_transform(super(), X)
 
 
+class StandardScaler(preprocessing.StandardScaler):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def transform(self, X):
+        return _dataframe_transform(super(), X)
+
+
+class RobustScaler(preprocessing.RobustScaler):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def transform(self, X):
+        return _dataframe_transform(super(), X)
+
+
 class DataFrameImputer(TransformerMixin):
     def __init__(self):
         """
