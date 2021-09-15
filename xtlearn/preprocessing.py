@@ -982,3 +982,29 @@ class OutliersRemover(BaseEstimator, TransformerMixin):
         X.loc[X["z_score"] < -z, column] = list_ref.min()
 
         return X[column]
+
+
+class CentredMeanScaler(preprocessing.MinMaxScaler):
+    def __init__(self):
+        super().__init__()
+        self.mean = None
+
+    def fit(self, X, y=None):
+
+        X = X.copy()
+
+        super().fit(X, y)
+
+        self.mean = np.mean(super().transform(X))
+
+        return self
+
+    def transform(self, X, y=None):
+
+        X = X.copy()
+
+        X = super().transform(X)
+
+        S = (X - X * self.mean) / (X + self.mean * (1 - 2 * X))
+
+        return S
