@@ -995,7 +995,7 @@ class CenteredMeanScaler(preprocessing.MinMaxScaler):
 
         super().fit(X, y)
 
-        self.mean = np.mean(super().transform(X))
+        self.mean = np.nanmean(super().transform(X))
 
         return self
 
