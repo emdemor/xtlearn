@@ -984,7 +984,7 @@ class OutliersRemover(BaseEstimator, TransformerMixin):
         return X[column]
 
 
-class CentredMeanScaler(preprocessing.MinMaxScaler):
+class CenteredMeanScaler(preprocessing.MinMaxScaler):
     def __init__(self):
         super().__init__()
         self.mean = None
