@@ -30,6 +30,7 @@ def roc_auc_plot(
 
 
 def ks_2sample_plot(model, X, y, bins=None):
+    
     y_prob = model.predict_proba(X)[:, 1]
 
     df = pd.DataFrame({"prob": y_prob, "y": y})
