@@ -103,8 +103,7 @@ def tnr_tpr_mean(y_true, y_pred):
     tpr = recall_score(y_true, y_pred)
     return 0.6 * tnr + 0.4 * tpr
 
-
-tnr_tpr_mean_score = make_scorer(tnr_tpr_mean, greater_is_better=True)
-auc_score = make_scorer(roc_auc_scorer, needs_proba=True, greater_is_better=True)
-ks_score = make_scorer(ks_2sample, needs_proba=True, greater_is_better=True)
-ks_auc_score = make_scorer(ks_auc_scorer, needs_proba=True, greater_is_better=True)
+# tnr_tpr_mean_score = make_scorer(tnr_tpr_mean, greater_is_better=True)
+# auc_score = make_scorer(roc_auc_scorer, needs_proba=True, greater_is_better=True)
+# ks_score = make_scorer(ks_2sample, needs_proba=True, greater_is_better=True)
+# ks_auc_score = make_scorer(ks_auc_scorer, needs_proba=True, greater_is_better=True)
